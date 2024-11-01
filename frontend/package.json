@@ -5,17 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "start": "vite", 
+    "start": "vite",   
     "build": "vite build",
-    "serve": "serve -s dist", 
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.27.0",
-    "serve": "^14.2.4" 
+    "react-router-dom": "^6.27.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",
