@@ -1,10 +1,10 @@
 {
   "name": "mern-sql-pos",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "backend/server.js",
   "scripts": {
     "dev": "concurrently \"nodemon backend/server.js\" \"cd frontend && npm start\"",
-    "start": "nodemon backend/server.js"
+    "start": "node backend/server.js"
   },
   "keywords": [],
   "author": "",
