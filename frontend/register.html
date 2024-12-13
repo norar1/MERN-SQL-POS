@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign up</title>
+  <link rel="stylesheet" href="register.css" />
+</head>
+<body>
+    <form class="form" id="create-account-form" method="POST" action="http://localhost:3000/api/accounts/CreateAccount">
+      <div class="form-title"><span>Create your account</span></div>
+      <div class="title-2"><span>NFS</span></div>
+
+      <div class="input-container">
+        <input id="username" placeholder="Username" type="text" class="input-name" required />
+      </div>
+    
+      <div class="input-container">
+        <input id="password" placeholder="Password" type="password" class="input-pwd" required />
+      </div>
+
+      <button class="submit" type="submit">
+        <span class="sign-text">Sign up</span>
+      </button>
+    
+      <p class="signin-link">
+        Have an account?
+        <a class="up" href="login.html">Sign in!</a>
+      </p>
+    </form>
+
+    
+    <div id="account-created-message" style="display: none;">
+      <h3>Account Created</h3>
+      <p id="message"></p>
+
+      
+      <div id="verification-section" style="display: none;">
+        <div class="input-container">
+          <input type="text" id="verification-code" placeholder="Enter Verification Code" required />
+        </div>
+        <button id="verify-button">Verify Account</button>
+        <button id="resend-verification-button">Resend Verification Code</button>
+      </div>
+
+      
+      <div id="verified-message" style="display: none;">
+        <p>Your account is verified! <a href="login.html">Log in here</a></p>
+      </div>
+    </div>
+    <script>
+      document.getElementById('create-account-form').addEventListener('submit', async function (event) {
+          event.preventDefault();
+          const username = document.getElementById('username').value;
+          const password = document.getElementById('password').value;
+
+          const response = await fetch('http://localhost:3000/api/accounts/CreateAccount', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ username, password }),
+          });
+
+          const data = await response.json();
+          if (response.ok) {
+              document.getElementById('account-created-message').style.display = 'block';
+              document.getElementById('message').textContent = 'Account created successfully! Please check your email for the verification code.';
+              document.getElementById('create-account-form').style.display = 'none';
+              document.getElementById('verification-section').style.display = 'block'; 
+          } else {
+              document.getElementById('message').textContent = data.error || 'Failed to create account. Please try again.';
+          }
+      });
+
+      document.getElementById('verify-button').addEventListener('click', async function () {
+          const username = document.getElementById('username').value;
+          const verificationCode = document.getElementById('verification-code').value;
+
+          const response = await fetch('http://localhost:3000/api/authroutes/verify-account', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ username, verification_code: verificationCode }),
+          });
+
+          const data = await response.json();
+          if (response.ok) {
+              document.getElementById('verified-message').style.display = 'block';
+              document.getElementById('verification-section').style.display = 'none';
+          } else {
+              document.getElementById('message').textContent = data.error || 'Invalid verification code. Please try again.';
+          }
+      });
+
+      document.getElementById('resend-verification-button').addEventListener('click', async function () {
+          const username = document.getElementById('username').value;
+
+          const response = await fetch('http://localhost:3000/api/authroutes/resend-verification', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ username }),
+          });
+
+          const data = await response.json();
+          if (response.ok) {
+              document.getElementById('message').textContent = 'A new verification code has been sent to your email.';
+          } else {
+              document.getElementById('message').textContent = data.error || 'Failed to resend verification code.';
+          }
+      });
+  </script>
+
+</body>
+</html>

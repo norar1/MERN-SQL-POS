@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In</title>
+  <link rel="stylesheet" href="login.css" />
+</head>
+<body>
+  <form class="form" id="loginForm">
+    <div class="form-title"><span>Sign in to your</span></div>
+    <div class="title-2"><span>NFS</span></div>
+
+    <div class="input-container">
+      <input id="username" placeholder="Username" type="text" required />
+    </div>
+
+    <div class="input-container">
+      <input id="password" placeholder="Password" type="password" required />
+    </div>
+
+    <button class="submit" type="submit">
+      <span class="btn">Sign in</span>
+    </button>
+
+    <p class="signup-link">
+      No account? <a class="up" href="Register.html">Sign up!</a>
+    </p>
+
+    <p id="error-message" class="error-message"></p>
+  </form>
+
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async function (event) {
+      event.preventDefault();
+
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      const errorMessageElement = document.getElementById('error-message');
+      errorMessageElement.textContent = '';
+
+      try {
+        const response = await fetch('http://localhost:3000/api/accounts/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          errorMessageElement.textContent = data.message || 'Login failed. Please check your credentials.';
+          return;
+        }
+
+        const { accessToken, refreshToken, userId, role } = data;
+
+    
+        localStorage.setItem('token', accessToken);
+        localStorage.setItem('refreshToken', refreshToken);
+        localStorage.setItem('userId', userId);
+
+       
+        const protectedResponse = await fetch('http://localhost:3000/api/authroutes/protected', {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+
+        const protectedData = await protectedResponse.json();
+
+        if (protectedResponse.ok && protectedData.success) {
+          if (role === 'admin') {
+            window.location.href = 'admin-db.html';
+          } else if (role=== 'seller') {
+            window.location.href = '1-seller.html';
+          } else if (role === 'user') {
+            window.location.href = '1-store.html';
+          }
+        } else {
+          errorMessageElement.textContent = 'Your account is not allowed access.';
+        }
+      } catch {
+        errorMessageElement.textContent = 'An issue occurred. Please try again.';
+      }
+    });
+  </script>
+</body>
+</html>

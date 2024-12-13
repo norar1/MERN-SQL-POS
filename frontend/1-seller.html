@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Item</title>
+    <link rel="stylesheet" href="1-seller.css">
+</head>
+<body>
+    <header>
+        <h2>Seller</h2>
+    </header>
+    <div class="container">
+        <form id="addItemForm" class="form">
+            <h3>Add Item</h3>
+            <input type="text" id="itemName" placeholder="Item Name" required>
+            <input type="number" id="itemPrice" placeholder="Item Price" required>
+            <input type="number" id="itemQuantity" placeholder="Item Quantity" required>
+            <input type="text" id="itemImageLink" placeholder="Item Image Link" required>
+            <input type="text" id="itemDescription" placeholder="Item Description" required>
+            <button type="button" onclick="submitAddItem()">Add Item</button>
+        </form>
+    </div>
+ 
+
+    <script>
+        async function submitAddItem() {
+            const itemData = {
+                name: document.getElementById('itemName').value,
+                price: Number(document.getElementById('itemPrice').value),
+                quantity: Number(document.getElementById('itemQuantity').value),
+                image_link: document.getElementById('itemImageLink').value,
+                description: document.getElementById('itemDescription').value,
+            };
+
+            if (Object.values(itemData).includes('') || itemData.price <= 0 || itemData.quantity <= 0) {
+                alert('Please fill in all fields correctly.');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/api/admindb/Createitems', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(itemData),
+                });
+
+                const result = await response.json();
+                alert(result.message || 'Item added successfully');
+                document.getElementById('addItemForm').reset();
+            } catch (error) {
+                alert('Error adding item: ' + error.message);
+            }
+        }
+    </script>
+        <footer>
+            <p>© 2024 CarXpert. All Rights Reserved</p>
+        </footer>
+</body>
+</html>

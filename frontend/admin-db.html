@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="admin-db.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <h2>Admin Dashboard</h2>
+            <button class="sidebar-btn" id="addItemBtn">Create Seller</button>
+            <button class="sidebar-btn" id="addCreditBtn">Add Credit</button>
+            <button class="sidebar-btn" id="addQuantityBtn">Add Quantity</button>
+            <button class="sidebar-btn" id="viewPurchaseLogsBtn">View Purchase Logs</button>
+            <button class="sidebar-btn" id="viewItemDataBtn">View Item Data</button>
+            <button class="sidebar-btn" id="viewUserDataBtn">View User Data</button>
+            <form action="/logout" method="POST" id="logoutForm">
+                <button type="submit" class="sidebar-btn">Logout</button>
+            </form>
+            <p>© 2024 CarXpert. All Rights Reserved.</p>
+        </div>
+        
+        <div class="main-content">
+            <form id="addItemForm" class="form" style="display: none;">
+                <h3>Create Seller</h3>
+                <input type="text" id="sellerUsername" placeholder="Seller Username" required>
+                <input type="password" id="sellerPassword" placeholder="Seller Password" required>
+                <button type="button" onclick="submitCreateSeller()">Create Seller</button>
+            </form>
+
+            <div id="addCreditForm" class="form" style="display: none;">
+                <h3>Add Credit</h3>
+                <input type="text" id="creditUsername" placeholder="Username" required>
+                <input type="number" id="creditAmount" placeholder="Credit Amount" required>
+                <button type="button" onclick="submitAddCredit()">Add Credit</button>
+            </div>
+
+            <div id="addQuantityForm" class="form" style="display: none;">
+                <h3>Add Quantity</h3>
+                <input type="text" id="quantityItemName" placeholder="Item Name" required>
+                <input type="number" id="quantityAmount" placeholder="Quantity" required>
+                <button type="button" onclick="submitAddQuantity()">Add Quantity</button>
+            </div>
+
+            <div id="purchaseLogs" class="data-section" style="display: none;">
+                <h3>Purchase Logs</h3>
+                <ul id="purchaseLogsList"></ul>
+            </div>
+
+            <div id="itemData" class="data-section" style="display: none;">
+                <h3>Item Data</h3>
+                <ul id="itemDataList"></ul>
+            </div>
+
+            <div id="userData" class="data-section" style="display: none;">
+                <h3>User Data</h3>
+                <ul id="userDataList"></ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('logoutForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            window.location.href = 'login.html';
+        });
+
+        document.getElementById('addItemBtn').addEventListener('click', () => {
+            showForm('addItemForm');
+            hideDataSections();
+        });
+
+        document.getElementById('addCreditBtn').addEventListener('click', () => {
+            showForm('addCreditForm');
+            hideDataSections();
+        });
+
+        document.getElementById('addQuantityBtn').addEventListener('click', () => {
+            showForm('addQuantityForm');
+            hideDataSections();
+        });
+
+        document.getElementById('viewPurchaseLogsBtn').addEventListener('click', () => {
+            showDataSection('purchaseLogs');
+            hideForms();
+            fetchPurchaseLogs();
+        });
+
+        document.getElementById('viewItemDataBtn').addEventListener('click', () => {
+            showDataSection('itemData');
+            hideForms();
+            fetchItems();
+        });
+
+        document.getElementById('viewUserDataBtn').addEventListener('click', () => {
+            showDataSection('userData');
+            hideForms();
+            fetchUserData();
+        });
+
+        function showForm(formId) {
+            document.querySelectorAll('.form').forEach(form => form.style.display = 'none');
+            document.getElementById(formId).style.display = 'block';
+        }
+
+        function showDataSection(sectionId) {
+            document.querySelectorAll('.data-section').forEach(section => section.style.display = 'none');
+            document.getElementById(sectionId).style.display = 'block';
+        }
+
+        function hideForms() {
+            document.querySelectorAll('.form').forEach(form => form.style.display = 'none');
+        }
+
+        function hideDataSections() {
+            document.querySelectorAll('.data-section').forEach(section => section.style.display = 'none');
+        }
+
+        async function submitCreateSeller() {
+            const sellerData = {
+                username: document.getElementById('sellerUsername').value,
+                password: document.getElementById('sellerPassword').value,
+            };
+
+            if (!sellerData.username || !sellerData.password) {
+                alert('Please fill in all fields correctly.');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/api/admindb/CreateSeller', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(sellerData),
+                });
+
+                const result = await response.json();
+                alert(result.message || 'Seller created successfully');
+                document.getElementById('addItemForm').reset();
+            } catch (error) {
+                alert('Error creating seller: ' + error.message);
+            }
+        }
+
+        async function submitAddCredit() {
+            const username = document.getElementById('creditUsername').value;
+            const credit = document.getElementById('creditAmount').value;
+
+            if (!username || credit <= 0) {
+                alert('Please fill in all fields correctly.');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/api/admindb/addcredit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, credit: Number(credit) }),
+                });
+
+                const result = await response.json();
+                alert(result.message || 'Credit added successfully');
+                document.getElementById('addCreditForm').querySelectorAll('input').forEach(input => input.value = '');
+            } catch (error) {
+                alert('Error adding credit: ' + error.message);
+            }
+        }
+
+        async function submitAddQuantity() {
+            const itemData = {
+                name: document.getElementById('quantityItemName').value,
+                quantity: Number(document.getElementById('quantityAmount').value),
+            };
+
+            if (!itemData.name || itemData.quantity <= 0) {
+                alert('Please fill in all fields correctly.');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/api/admindb/addquantity', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(itemData),
+                });
+
+                const result = await response.json();
+                alert(result.message || 'Quantity added successfully');
+                document.getElementById('addQuantityForm').querySelectorAll('input').forEach(input => input.value = '');
+            } catch (error) {
+                alert('Error adding quantity: ' + error.message);
+            }
+        }
+
+        async function fetchPurchaseLogs() {
+            try {
+                const response = await fetch('http://localhost:3000/api/admindb/Purchaselogs');
+                const data = await response.json();
+                const logsList = document.getElementById('purchaseLogsList');
+                logsList.innerHTML = data.result.map(log => {
+                    return `<li>Item ID: ${log.item_id} | Quantity: ${log.quantity} | Total: ${log.total_price} | Date: ${new Date(log.date).toLocaleString()}</li>`;
+                }).join('');
+            } catch {
+                alert('Error fetching purchase logs.');
+            }
+        }
+
+        async function fetchItems() {
+            try {
+                const response = await fetch('http://localhost:3000/api/admindb/Getitems');
+                const data = await response.json();
+                const itemList = document.getElementById('itemDataList');
+                itemList.innerHTML = data.result.map(item => {
+                    return `<li><strong>${item.name}</strong> | Price: ${item.price} | Quantity: ${item.quantity}<br><img src="${item.image_link}" alt="${item.name}" width="100"></li>`;
+                }).join('');
+            } catch {
+                alert('Error fetching items.');
+            }
+        }
+
+        async function fetchUserData() {
+            try {
+                const response = await fetch('http://localhost:3000/api/admindb/getuserdata');
+                const data = await response.json();
+                const userList = document.getElementById('userDataList');
+                userList.innerHTML = data.data.map(user => {
+                    return `<li>${user.username} | Credit: ${user.credit}</li>`;
+                }).join('');
+            } catch {
+                alert('Error fetching user data.');
+            }
+        }
+    </script>
+</body>
+</html>

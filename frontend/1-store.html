@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="1-store.css">
+    <title>Product Grid</title>
+</head>
+<body>
+    <header>
+        <h1>CarXpert🚗💰</h1>
+    </header>
+
+    <button id="toggle-cart-btn">🛒</button>
+
+    <main class="product-grid" id="product-container"></main>
+
+    <div id="cart-container" style="display:none;">
+        <h2>Your Cart</h2>
+        <table id="cart-items">
+            <thead>
+                <tr>
+                    <th>Image</th>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <button id="buy-all" style="display:none;">Check Out</button>
+        <button id="clear-cart" style="display:none;">Clear Cart</button>
+        <div id="paypal-button-container" style="display:none;"></div>
+    </div>
+
+    <footer>
+        <p>©2024 CarXpert. All Rights Reserved.</p>
+    </footer>
+</body>
+</html>
+
+
+    <script>
+        const userId = localStorage.getItem('userId');
+        if (!userId) {
+            alert('Please log in first.');
+            window.location.href = '/login';
+        }
+
+        let cart = loadCartForUser();
+
+        async function loadProducts() {
+            try {
+                const response = await fetch('http://localhost:3000/api/admindb/Getitems');
+                const data = await response.json();
+
+                if (data.result && Array.isArray(data.result)) {
+                    const products = data.result;
+                    const container = document.getElementById('product-container');
+
+                    products.forEach(product => {
+                        container.innerHTML += `
+                            <div class="product-card">
+                                <img src="${product.image_link}" alt="${product.name}" class="product-image">
+                                <h3>${product.name}</h3>
+                                <p>Price: $${product.price}</p>
+                                <p>Description: ${product.description}</p>
+                                <div class="product-actions">
+                                    <select class="payment-dropdown" 
+                                            data-item-id="${product.id}" 
+                                            data-item-price="${product.price}" 
+                                            data-item-name="${product.name}" 
+                                            data-item-description="${product.description}" 
+                                            data-item-image="${product.image_link}">
+                                        <option value="">Select Payment Method</option>
+                                        <option value="store-credit">Buy Now (Store Credit)</option>
+                                        <option value="paypal">Buy with PayPal</option>
+                                        <option value="add-to-cart">Add to Cart</option>
+                                    </select>
+                                </div>
+                            </div>`;
+                    });
+
+                    addEventListeners();
+                } else {
+                    throw new Error('No products available or invalid data.');
+                }
+            } catch (error) {
+                console.error('Error loading products:', error);
+            }
+        }
+
+        function addToCart(itemId, itemName, itemPrice, quantity, imageLink) {
+            const totalPrice = (itemPrice * quantity).toFixed(2);
+            const existingItem = cart.find(item => item.id === itemId);
+
+            if (existingItem) {
+                existingItem.quantity += quantity;
+                existingItem.totalPrice = (parseFloat(existingItem.totalPrice) + parseFloat(totalPrice)).toFixed(2);
+            } else {
+                cart.push({ id: itemId, name: itemName, price: itemPrice, quantity, totalPrice, imageLink });
+            }
+
+            saveCartForUser();
+            displayCart();
+        }
+
+        function displayCart() {
+            const cartItemsContainer = document.querySelector('#cart-items tbody');
+            cartItemsContainer.innerHTML = '';
+
+            cart.forEach(item => {
+                cartItemsContainer.innerHTML += `
+                    <tr>
+                        <td><img src="${item.imageLink}" alt="${item.name}" style="width:50px;height:50px;"></td>
+                        <td>${item.name}</td>
+                        <td>${item.quantity}</td>
+                        <td>$${item.totalPrice}</td>
+                    </tr>`;
+            });
+
+            const buyAllButton = document.getElementById('buy-all');
+            const clearCartButton = document.getElementById('clear-cart');
+            buyAllButton.style.display = cart.length > 0 ? 'block' : 'none';
+            clearCartButton.style.display = cart.length > 0 ? 'block' : 'none';
+        }
+
+        function clearCart() {
+            cart.length = 0;
+            saveCartForUser();
+            displayCart();
+        }
+
+        function saveCartForUser() {
+            localStorage.setItem(`cart-${userId}`, JSON.stringify(cart));
+        }
+
+        function loadCartForUser() {
+            return JSON.parse(localStorage.getItem(`cart-${userId}`)) || [];
+        }
+
+        async function buyAllItems() {
+            const items = cart.map(item => ({ itemId: item.id, quantity: item.quantity }));
+
+            try {
+                const response = await fetch('http://localhost:3000/api/items/PurchaseItems', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, items })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Failed to purchase items.');
+                }
+
+                alert(data.message);
+                cart = [];
+                saveCartForUser();
+                displayCart();
+            } catch (error) {
+                console.error('Error purchasing items:', error);
+                alert(error.message);
+            }
+        }
+
+        function addEventListeners() {
+            document.querySelectorAll('.payment-dropdown').forEach(dropdown => {
+                dropdown.addEventListener('change', async (event) => {
+                    const paymentMethod = event.target.value;
+                    const itemId = dropdown.dataset.itemId;
+                    const itemPrice = parseFloat(dropdown.dataset.itemPrice);
+                    const itemName = dropdown.dataset.itemName;
+                    let quantity = prompt('Enter quantity:');
+                    quantity = parseInt(quantity, 10); 
+
+                    if (isNaN(quantity) || quantity <= 0) {
+                        return alert('Please enter a valid quantity.');
+                    }
+
+                    if (paymentMethod === 'store-credit') {
+                        purchaseWithStoreCredit(itemId, itemPrice, quantity);
+                    } else if (paymentMethod === 'paypal') {
+                        initializePayPalButton(itemPrice, quantity);
+                    } else if (paymentMethod === 'add-to-cart') {
+                        addToCart(itemId, itemName, itemPrice, quantity, dropdown.dataset.itemImage);
+                    }
+
+                    dropdown.value = '';
+                });
+            });
+
+            document.getElementById('buy-all').addEventListener('click', buyAllItems);
+            document.getElementById('clear-cart').addEventListener('click', clearCart);
+        }
+
+        function initializePayPalButton(itemPrice, quantity) {
+            const paypalContainer = document.getElementById('paypal-button-container');
+            paypalContainer.style.display = 'block';
+
+            if (!window.paypal) {
+                alert('PayPal SDK not loaded properly.');
+                return;
+            }
+
+            paypal.Buttons({
+                createOrder: (data, actions) => {
+                    return actions.order.create({
+                        purchase_units: [{
+                            amount: {
+                                value: (itemPrice * quantity).toFixed(2)
+                            }
+                        }]
+                    });
+                },
+                onApprove: (data, actions) => {
+                    return actions.order.capture().then(() => {
+                        alert('Payment successful!');
+                        cart = [];
+                        saveCartForUser();
+                        displayCart();
+                    });
+                },
+                onCancel: () => {
+                    alert('Payment canceled.');
+                    paypalContainer.style.display = 'none';
+                },
+                onError: (err) => {
+                    console.error(err);
+                    alert('Payment error.');
+                }
+            }).render('#paypal-button-container');
+        }
+
+        async function purchaseWithStoreCredit(itemId, price, quantity) {
+            const items = [{ itemId, quantity }];
+
+            try {
+                const response = await fetch('http://localhost:3000/api/items/PurchaseItems', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, items, paymentMethod: 'store-credit' })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Purchase failed.');
+                }
+
+                alert(data.message);
+            } catch (error) {
+                console.error('Store credit error:', error);
+                alert(error.message);
+            }
+        }
+
+        document.getElementById('toggle-cart-btn').addEventListener('click', () => {
+            const cartContainer = document.getElementById('cart-container');
+            const currentDisplay = cartContainer.style.display;
+            cartContainer.style.display = currentDisplay === 'none' || currentDisplay === '' ? 'block' : 'none';
+        });
+
+        window.onload = () => {
+            loadProducts();
+            displayCart();
+        };
+    </script>
+
+    <script src="https://www.paypal.com/sdk/js?client-id=AXP1e-qW0-F1sg8_RfHfM2Og_LXZ0cnuzlPB3pi90l-59gLMA5gAb8LLHe6wDs5lmjaXCPFXhrKqm7Ge"></script>
+</body>
+</html>

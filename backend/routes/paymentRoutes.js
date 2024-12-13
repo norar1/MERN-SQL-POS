@@ -1,5 +1,5 @@
 import express from 'express';
-import { client } from '../Controller/paypalConfig.js'; // Make sure to use the correct file extension
+import { client } from '../controller/Paypal-payment/paypalConfig.js'
 import checkoutNodeJssdk from '@paypal/checkout-server-sdk';
 
 const router = express.Router();
